@@ -12,6 +12,7 @@
 // 移動・編集、元に戻す / やり直し、保存。再生はブラウザの AudioWorklet で、本体の
 // WaveLoopManager::Decode と同じ規則でリンクをたどる (サンプル単位で正確、
 // Smooth は 50ms のクロスフェード、«:» で始まるラベルでフラグを操作)。
+// WAV 書き出し: 選択範囲 / 全体、またはリンクをたどって再生した音 (ループを展開した音)。
 //
 // CLI の終了コード: 0 = 成功 / 1 = check で問題あり / 2 = 失敗
 //---------------------------------------------------------------------------
@@ -228,7 +229,8 @@ public:
 			return appserve::Response::json(j);
 		});
 
-		// 開いている音声の PCM (16bit 符号付き、チャンネル交互、リトルエンディアン)
+		// 開いている音声の PCM (32bit float、チャンネル交互、リトルエンディアン)。
+		// 書き出しで元の精度を保つため、間引かずにそのまま渡す
 		reg.route("/api/loop/pcm", appserve::Affinity::Any, [this](const appserve::Request&) {
 			std::shared_ptr<au::Pcm> pcm;
 			{
@@ -236,16 +238,37 @@ public:
 				pcm = pcm_;
 			}
 			if (!pcm) return appserve::Response::error(404, "音声を開いていません");
-			std::string out(pcm->data.size() * 2, '\0');
-			for (size_t i = 0; i < pcm->data.size(); ++i) {
-				float v = pcm->data[i] * 32767.0f;
-				if (v > 32767.0f) v = 32767.0f;
-				if (v < -32768.0f) v = -32768.0f;
-				const int16_t s = (int16_t)(v < 0 ? v - 0.5f : v + 0.5f);
-				out[i * 2] = (char)(s & 0xff);
-				out[i * 2 + 1] = (char)((s >> 8) & 0xff);
-			}
+			std::string out(pcm->data.size() * sizeof(float), '\0');
+			std::memcpy(out.data(), pcm->data.data(), out.size());
 			return appserve::Response::bytes(std::move(out), "application/octet-stream");
+		});
+
+		// WAV 書き出し (クエリ: out, rate, channels, bits, force。本文: 32bit float のチャンネル交互)
+		reg.route("/api/loop/wav", appserve::Affinity::Any, [](const appserve::Request& req) {
+			const fs::path out = krt::toPath(req.param("out"));
+			const int rate = std::atoi(req.param("rate").c_str());
+			const int ch = std::atoi(req.param("channels").c_str());
+			const int bits = std::atoi(req.param("bits", "16").c_str());
+			const bool force = req.param("force") == "1";
+			if (out.empty() || rate <= 0 || ch <= 0 || (bits != 16 && bits != 24 && bits != 32))
+				return appserve::Response::error(400, "指定が不正です");
+			if (req.body.size() % (sizeof(float) * ch) != 0) return appserve::Response::error(400, "データの長さが不正です");
+			std::error_code ec;
+			if (!force && fs::exists(out, ec)) return appserve::Response::error(409, "出力先が既にあります: " + krt::fromPath(out));
+			au::Pcm pcm;
+			pcm.sampleRate = rate;
+			pcm.channels = ch;
+			pcm.data.resize(req.body.size() / sizeof(float));
+			std::memcpy(pcm.data.data(), req.body.data(), req.body.size());
+			au::EncodeOptions eo;
+			eo.format = au::Format::Wav;
+			eo.wavBits = bits;
+			std::string err;
+			if (!au::encode(pcm, out, eo, nullptr, err)) return appserve::Response::error(400, err);
+			Json j = Json::object();
+			j.set("path", Json(krt::fromPath(out)));
+			j.set("frames", Json((long long)pcm.frames()));
+			return appserve::Response::json(j);
 		});
 
 		// 保存 (body: { file, links, labels, frames }) → { sliPath, problems }

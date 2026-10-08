@@ -3,6 +3,7 @@
 // 波形の表示・編集は全部ここ (サーバは音声の読み込みと .sli の読み書きだけ)。
 // 再生は loop-worklet.js (本体 WaveLoopManager::Decode の移植)。
 import { app, krt } from './common/krt.js';
+import { LoopEngine } from './loop-core.js';
 
 const $ = (id) => document.getElementById(id);
 const dirOf = (p) => (p || '').replace(/[\\/][^\\/]*$/, '');
@@ -90,12 +91,12 @@ async function openFile(path) {
 		info = await app.post('/api/loop/open', { file: path });
 	} catch (e) { setMsg(String(e.message || e), true); return; }
 	const buf = await app.bytes('/api/loop/pcm');
-	const pcm = new Int16Array(buf);
+	const pcm = new Float32Array(buf);
 	const ch = info.channels, frames = info.frames;
 	const channels = [];
 	for (let c = 0; c < ch; c++) channels.push(new Float32Array(frames));
 	for (let i = 0, k = 0; i < frames; i++)
-		for (let c = 0; c < ch; c++) channels[c][i] = pcm[k++] / 32768;
+		for (let c = 0; c < ch; c++) channels[c][i] = pcm[k++];
 	st.file = info.path;
 	st.sliPath = info.sliPath;
 	st.sampleRate = info.sampleRate;
@@ -536,7 +537,7 @@ function refreshButtons() {
 	$('save').disabled = !has;
 	$('undo').disabled = !st.undo.length;
 	$('redo').disabled = !st.redo.length;
-	for (const id of ['play', 'playTop', 'addLink', 'addLabel', 'addLink2', 'addLabel2']) $(id).disabled = !has;
+	for (const id of ['play', 'playTop', 'addLink', 'addLabel', 'addLink2', 'addLabel2', 'exportWav']) $(id).disabled = !has;
 	$('play').textContent = st.playing ? '■ 停止' : '▶ 再生';
 	$('preview').disabled = !(st.sel?.kind === 'link');
 	$('remove').disabled = !st.sel;
@@ -670,6 +671,93 @@ function editLabel(index) {
 		if (isNew) { st.labels.push(v); st.sel = { kind: 'label', index: st.labels.length - 1 }; }
 		else st.labels[index] = v;
 		endEdit();
+		return null;
+	});
+}
+
+//---------------------------------------------------------------------------
+// WAV 書き出し
+//---------------------------------------------------------------------------
+/// [a, b) をそのまま切り出す (チャンネル交互)
+function sliceInterleaved(a, b) {
+	const ch = st.channels.length, n = b - a;
+	const out = new Float32Array(n * ch);
+	for (let i = 0; i < n; i++) for (let c = 0; c < ch; c++) out[i * ch + c] = st.channels[c][a + i];
+	return out;
+}
+
+/// start から、リンクをたどって再生した音を frames サンプル分作る (再生と同じ loop-core.js)
+function renderLoop(start, frames, looping) {
+	const ch = st.channels.length;
+	const en = new LoopEngine(st.sampleRate);
+	en.load(st.channels, st.frames);
+	en.setData(st.links, st.labels);
+	en.setFlags(st.flags);
+	en.looping = looping;
+	en.ignoreLinks = false;
+	en.start(start);
+	const out = new Float32Array(frames * ch);
+	const BLK = 4096;
+	const tmp = [];
+	for (let c = 0; c < ch; c++) tmp.push(new Float32Array(BLK));
+	let done = 0, jumps = 0;
+	while (done < frames && en.playing) {
+		const n = Math.min(BLK, frames - done);
+		const w = en.decode(tmp, n);
+		for (let i = 0; i < w; i++) for (let c = 0; c < ch; c++) out[(done + i) * ch + c] = tmp[c][i];
+		done += w;
+		jumps += en.events.filter(e => e.kind === 'jump').length;
+		en.events = [];
+		if (w < n && en.playing) break;   // リンクが続いて先へ進めない (本体と同じく打ち切り)
+	}
+	return { data: out.subarray(0, done * ch), frames: done, jumps };
+}
+
+function exportWav() {
+	if (!st.frames) return;
+	const hasRange = st.rangeA >= 0 && st.rangeB >= 0 && st.rangeA !== st.rangeB;
+	const base = st.file.replace(/\.[^.\\/]*$/, '');
+	const mode = krt.el('select');
+	mode.append(krt.el('option', { value: 'range' }, hasRange ? '選択範囲をそのまま' : '全体をそのまま'),
+		krt.el('option', { value: 'loop' }, 'リンクをたどって再生した音 (ループを展開)'));
+	const from = krt.el('select');
+	from.append(krt.el('option', { value: 'caret' }, `キャレット (${fmtPos(st.caret)})`), krt.el('option', { value: 'top' }, '先頭'));
+	const secs = krt.el('input', { type: 'text', value: String(Math.ceil(Math.min(600, st.frames / st.sampleRate * 2))) });
+	const looping = krt.el('input', { type: 'checkbox' });
+	looping.checked = $('looping').checked;
+	const bits = krt.el('select');
+	for (const [v, t] of [['16', '16bit'], ['24', '24bit'], ['32', '32bit float']]) bits.append(krt.el('option', { value: v }, t));
+	const out = krt.el('input', { type: 'text', value: base + (hasRange ? '_range' : '_out') + '.wav', spellcheck: 'false', style: 'width: 100%' });
+	const force = krt.el('input', { type: 'checkbox' });
+	const loopRows = [krt.el('span', {}, '開始位置'), from, krt.el('span', {}, '長さ (秒)'), secs, krt.el('span', {}, ''), krt.el('label', {}, looping, ' 末尾で先頭へ戻る')];
+	const upd = () => {
+		for (const e of loopRows) e.style.display = mode.value === 'loop' ? '' : 'none';
+		if (out.value.startsWith(base + '_')) out.value = base + (mode.value === 'loop' ? '_loop' : hasRange ? '_range' : '_out') + '.wav';
+	};
+	mode.addEventListener('change', upd);
+	const body = krt.el('div', {},
+		krt.el('div', { class: 'dlg-grid' }, '内容', mode, ...loopRows, 'ビット数', bits, '出力先', out, '', krt.el('label', {}, force, ' 上書きする')),
+		krt.el('div', { class: 'hint' }, '«ループを展開» は、いまのフラグの値から再生したときと同じ規則 (条件・Smooth・ラベルのフラグ式) でリンクをたどった音を書き出す。\nつなぎ目を別の波形エディタで確かめるときなどに使う。'));
+	upd();
+	dialog('WAV 書き出し', body, () => {
+		let data, frames, note = '';
+		if (mode.value === 'range') {
+			const a = hasRange ? Math.min(st.rangeA, st.rangeB) : 0, b = hasRange ? Math.max(st.rangeA, st.rangeB) : st.frames;
+			data = sliceInterleaved(a, b);
+			frames = b - a;
+		} else {
+			const sec = Number(secs.value);
+			if (!(sec > 0 && sec <= 3600)) return '長さは 0〜3600 秒で指定してください';
+			const r = renderLoop(from.value === 'top' ? 0 : st.caret, Math.round(sec * st.sampleRate), looping.checked);
+			data = r.data;
+			frames = r.frames;
+			note = ` (リンク ${r.jumps} 回)`;
+		}
+		if (!frames) return '書き出す内容がありません';
+		app.post('/api/loop/wav', data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength), {
+			out: out.value, rate: st.sampleRate, channels: st.channels.length, bits: bits.value, force: force.checked ? 1 : 0,
+		}).then(r => setMsg(`書き出しました: ${r.path} ${fmtTime(r.frames)}${note}`))
+			.catch(e => setMsg('書き出せません: ' + (e.message || e), true));
 		return null;
 	});
 }
@@ -815,6 +903,7 @@ $('zoomAll').addEventListener('click', zoomAll);
 for (const id of ['addLink', 'addLink2']) $(id).addEventListener('click', () => editLink(-1));
 for (const id of ['addLabel', 'addLabel2']) $(id).addEventListener('click', () => editLabel(-1));
 $('remove').addEventListener('click', removeSelected);
+$('exportWav').addEventListener('click', exportWav);
 $('resetFlags').addEventListener('click', () => { st.flags.fill(0); sendFlags(); refreshFlags(); });
 for (const id of ['looping', 'ignoreLinks']) $(id).addEventListener('change', sendOptions);
 
@@ -826,6 +915,7 @@ window.addEventListener('keydown', (e) => {
 	let handled = true;
 	if (ctrl && k.toLowerCase() === 's') save();
 	else if (ctrl && k.toLowerCase() === 'o') pickAndOpen();
+	else if (ctrl && k.toLowerCase() === 'e') exportWav();
 	else if (ctrl && k.toLowerCase() === 'z') (e.shiftKey ? redo : undo)();
 	else if (ctrl && k.toLowerCase() === 'y') redo();
 	else if (!st.frames) handled = false;
