@@ -14,6 +14,7 @@ HTTP + SSE + browser app-mode window). **Every tool must also run headless from 
 
 ## Layout
 
+- `external/psdparse`, `external/clipparse` — submodules (wamsoft), pinned to the same commits krkrz_dev uses.
 - `external/appserve` — submodule (wamsoft/appserve). Zero external deps, C++17. Read its `CLAUDE.md` /
   `docs/DESIGN.md` before changing how tools use it. Do not fork behaviour into this repo; fix appserve upstream.
 - `cmake/KrtTool.cmake` — `krt_add_tool(<target> SOURCES … WEB_DIR … LIBS …)`. Stages
@@ -27,6 +28,15 @@ HTTP + SSE + browser app-mode window). **Every tool must also run headless from 
 - `libs/xp3` (`krt_xp3`) — xp3 read / write (zlib from vcpkg).
 - `libs/loop` (`krt_loop`) — `.sli` loop info; the parser is a port of the engine's `WaveLoopManager::ReadInformation` (keep it rejecting exactly what the engine rejects, incl. non-UTF-8 label names).
 - `libs/audio` (`krt_audio`) — WAV / Ogg Vorbis / Ogg Opus decode + encode (libvorbis, opusfile, libopusenc), loudness (libebur128), per-frame levels.
+- `libs/tlg` (`krt_tlg`) — TLG5 / TLG6 encode + decode, a standalone port of the engine's
+  `SaveTLG5.cpp` / `SaveTLG6.cpp` / `LoadTLG.cpp` + the C reference parts of `tvpgl.c` (the engine code
+  is too coupled to TJS / LayerBitmap to reference directly). **Encoder output must stay byte-identical
+  to the engine's `Bitmap.save(..."tlg5"/"tlg6"/"tlg524"/"tlg624")`** (verified 114/114). Standalone
+  test project: `libs/tlg/test` (`tlgtest selftest`, encode / decode CLI). Note: `Bitmap.setPixel` takes
+  RGB only — set alpha with `setMaskPixel` when generating engine fixtures.
+- `libs/image` (`krt_image`) — BMP (own) / PNG (libpng) / JPEG (libjpeg-turbo) / TLG / PSD (psdparse) /
+  CLIP (clipparse) loading, saving, and the legacy krkrtpc preprocessing (`expandOpaqueColor` etc. follow
+  `kirikiri2/src/tools/win32/krdevui/tpc/TPCMainUnit.cpp` exactly); `Layers.h` = per-layer extraction.
 - `web/common` — shared UI (`krt.js`: init, job watching, folder / file picker; `krt.css`).
 - `tools/<name>/` — `main.cpp` (options, CLI path, `IModule` with the tool's API) + `web/`.
 

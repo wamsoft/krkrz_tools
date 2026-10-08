@@ -48,6 +48,11 @@ endif()
 set(APPSERVE_BUILD_APP OFF CACHE BOOL "" FORCE)
 add_subdirectory(external/appserve)
 
+# psdparse / clipparse (PSD・CLIP STUDIO の読み込みと合成)
+add_subdirectory(external/psdparse EXCLUDE_FROM_ALL)
+set(CLIPPARSE_BUILD_CLI OFF CACHE BOOL "" FORCE)
+add_subdirectory(external/clipparse EXCLUDE_FROM_ALL)
+
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include(KrtTool)
 
@@ -59,8 +64,11 @@ add_subdirectory(libs/sig)
 add_subdirectory(libs/xp3)
 add_subdirectory(libs/loop)
 add_subdirectory(libs/audio)
+add_subdirectory(libs/tlg)
+add_subdirectory(libs/image)
 
 add_subdirectory(tools/filecheck)
 add_subdirectory(tools/sign)
 add_subdirectory(tools/xp3)
 add_subdirectory(tools/audio)
+add_subdirectory(tools/image)

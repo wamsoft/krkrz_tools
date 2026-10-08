@@ -1,3 +1,9 @@
 [submodule "external/appserve"]
 	path = external/appserve
 	url = https://github.com/wamsoft/appserve.git
+[submodule "external/psdparse"]
+	path = external/psdparse
+	url = https://github.com/wamsoft/psdparse.git
+[submodule "external/clipparse"]
+	path = external/clipparse
+	url = https://github.com/wamsoft/clipparse.git

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>画像フォーマットコンバータ</title>
+<link rel="stylesheet" href="./common/krt.css">
+<style>
+	.scroll { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; }
+	.opts { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; }
+	.opts input[type=text] { width: 4em; }
+	fieldset { border: 1px solid var(--line); border-radius: 6px; display: flex; flex-direction: column; gap: 6px; }
+	legend { color: var(--muted); }
+	.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+	@media (max-width: 720px) { .cols { grid-template-columns: 1fr; } }
+	td.msg { color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<header class="krt-header"><h1>画像フォーマットコンバータ</h1></header>
+<main class="krt-main">
+	<div class="krt-row">
+		<label class="krt-label">ファイル</label>
+		<button id="add">追加…</button>
+		<button id="clear">クリア</button>
+		<span class="krt-note">BMP / PNG / JPEG / TLG / PSD / CLIP。«ファイル_m.png» などがあればメイン/マスク分離形式として読みます。</span>
+	</div>
+	<div class="scroll">
+		<table class="krt-table">
+			<thead><tr><th>ファイル</th><th>形式</th><th class="num">幅</th><th class="num">高さ</th><th>透明</th><th>備考</th></tr></thead>
+			<tbody id="files"></tbody>
+		</table>
+	</div>
+	<div class="cols">
+		<fieldset>
+			<legend>不透明な画像</legend>
+			<div class="opts">
+				<label>形式 <select id="opaque">
+					<option value="tlg5">TLG5</option><option value="tlg6">TLG6</option><option value="png">PNG</option>
+					<option value="bmp">BMP (24bit)</option><option value="jpg">JPEG</option></select></label>
+				<label id="qWrap">品質 <input type="text" id="quality" value="90"></label>
+			</div>
+		</fieldset>
+		<fieldset>
+			<legend>透明部分のある画像</legend>
+			<div class="opts">
+				<label>形式 <select id="alpha">
+					<option value="tlg5">TLG5</option><option value="tlg6">TLG6</option><option value="png">PNG</option>
+					<option value="bmp">BMP (32bit)</option><option value="sep">メイン/マスク分離</option></select></label>
+			</div>
+			<div class="opts" id="sepWrap" hidden>
+				<label>メイン <select id="sepMain"><option value="jpg">JPEG</option><option value="png">PNG</option><option value="bmp">BMP</option></select></label>
+				<label>品質 <input type="text" id="mainQuality" value="90"></label>
+				<label>マスク <select id="sepMask"><option value="jpg">JPEG</option><option value="png">PNG</option><option value="bmp">BMP</option></select></label>
+				<label>品質 <input type="text" id="maskQuality" value="90"></label>
+			</div>
+			<div class="opts">
+				<label>完全透明部分の色 <select id="transparent">
+					<option value="remove">除去 (黒にする)</option><option value="keep">そのまま</option>
+					<option value="expand1">周囲の色で合成 (1px)</option><option value="expand2">周囲の色で合成 (2px)</option>
+					<option value="expand3">周囲の色で合成 (3px)</option><option value="expand5">周囲の色で合成 (5px)</option>
+					<option value="expand8">周囲の色で合成 (8px)</option></select></label>
+			</div>
+			<div class="opts">
+				<label><input type="checkbox" id="inputAddAlpha"> 入力を ltAddAlpha 形式とみなす</label>
+				<label><input type="checkbox" id="addAlpha"> ltAddAlpha 形式で出力する</label>
+			</div>
+		</fieldset>
+	</div>
+	<div class="krt-note">全画素が不透明な画像は、透明度を持つ形式でも «不透明な画像» として扱います。TLG には mode タグ (opaque / alpha / addalpha) を書きます。
+完全透明部分の «合成» は JPEG のにじみ対策です。ltAddAlpha で出力するときは使いません。</div>
+	<div class="krt-row">
+		<label class="krt-label">出力フォルダ</label>
+		<input type="text" id="outDir" spellcheck="false" placeholder="空 = 元のファイルと同じフォルダ (相対パスは元のファイルのフォルダから)">
+		<button id="outBrowse">参照…</button>
+		<label><input type="checkbox" id="force"> 上書き</label>
+	</div>
+	<div class="krt-row"><button id="convert" class="primary">変換する</button><button id="cancel" disabled>中断</button></div>
+
+	<div id="jobArea" hidden>
+		<div id="progress" class="krt-progress"><div></div></div>
+		<div id="jobStatus" class="krt-note"></div>
+		<div class="scroll"><table class="krt-table"><tbody id="results"></tbody></table></div>
+	</div>
+</main>
+<script type="module" src="./app.js"></script>
+</body>
+</html>

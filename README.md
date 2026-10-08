@@ -18,6 +18,7 @@
 | `krkrsign` | キー生成・署名ツール | 動作確認済み (Windows) |
 | `krkrxp3` | xp3 アーカイブツール (作成・一覧・展開・検証) | 動作確認済み (Windows) |
 | `krkraudio` | 音声フォーマットコンバータ (変換・音量・口パク用の音量) | 動作確認済み (Windows) |
+| `krkrimg` | 画像フォーマットコンバータ (旧 krkrtpc の後継。PSD / CLIP の合成・レイヤ書き出し) | 動作確認済み (Windows) |
 
 ### krkrcheck — ファイル破損チェックツール
 
@@ -86,6 +87,30 @@ krkraudio --cli lipsync  <ファイル> [--fps=30] [--format=json|csv] [--out=FI
 - `lipsync`: 一定間隔ごとの音量 (RMS とピーク、0〜1)。口パクの開き具合に使う (出力形式は暫定。母音の推定は今後)
 - 本体 (krkrz) で、変換した音声と .sli を開けることを確認済み
 
+### krkrimg — 画像フォーマットコンバータ
+
+```
+krkrimg [<ファイル>...]                         画面を開く
+krkrimg --cli info    <ファイル>...
+krkrimg --cli convert <ファイル>... [--opaque=tlg5|tlg6|png|bmp|jpg]
+                      [--alpha=tlg5|tlg6|png|bmp|sep] [--sep-main=jpg|png|bmp] [--sep-mask=jpg|png|bmp]
+                      [--quality=90] [--main-quality=90] [--mask-quality=90]
+                      [--transparent=remove|keep|expand1..8] [--input-addalpha] [--addalpha]
+                      [--out=DIR] [--force]
+krkrimg --cli layers  <PSD / CLIP>... [--format=png|tlg5|tlg6] [--hidden] [--out=DIR] [--force]
+```
+
+- 入力は BMP / PNG / JPEG / TLG5 / TLG6 / PSD / CLIP STUDIO (.clip)。PSD と CLIP はレイヤから合成する
+  (PSD はブレンドモード・レイヤー効果・調整レイヤ込み)。«ファイル_m.bmp/png/jpg» があればメイン/マスク分離形式として読む
+- 旧 krkrtpc と同じ規則: 不透明な画像と透明部分のある画像で別々の形式 (全画素が不透明なら «不透明»)、
+  完全透明部分の色の処理 (除去 / そのまま / 周囲の色で合成)、ltAddAlpha への変換、
+  TLG の `mode` タグ、PNG の oFFs / vpAg / pHYs を `offs_*` / `vpag_*` / `reso_*` タグとして引き継ぐ
+- `layers`: レイヤを «ファイル名/番号_レイヤ名.png» に 1 枚ずつ書き出し、位置・不透明度・ブレンドモードを
+  «ファイル名/layers.json» にまとめる。各画像には文書上の位置 (`offs_*`) と文書の大きさ (`vpag_*`)、
+  TLG にはブレンドモードに対応する `mode` タグ (psmul など) を書く。PSD はレイヤー効果込み
+- TLG の読み書きは本体のコードの移植 (`libs/tlg`)。**本体と同じ入力から同じバイト列を出す**ことと、
+  本体で読めて画素・タグが一致することを確認済み
+
 ### 共通のオプション
 
 - `--cli` … 画面を開かずに処理して終わる
@@ -111,12 +136,16 @@ krkrz_dev を置いているフォルダの親を設定する (krkrz_android / k
 
 ```
 external/appserve   ブラウザ UI のフレームワーク (submodule)
+external/psdparse   PSD の読み込みと合成 (submodule)
+external/clipparse  CLIP STUDIO (.clip) の読み込みと合成 (submodule。sqlite を FetchContent で取る)
 cmake/KrtTool.cmake krt_add_tool(): ツールの exe + 画面の埋め込み
 libs/app            共通の枠 (GUI / CLI の振り分け、長い処理の実行と進捗、パス変換)
 libs/sig            電子署名 (検証・鍵生成・署名)
 libs/xp3            xp3 アーカイブの読み書き
 libs/loop           ループ情報 (.sli) の読み書き
 libs/audio          音声の読み書き (WAV / Vorbis / Opus) とラウドネス・音量
+libs/tlg            TLG5 / TLG6 の読み書き (本体 SaveTLG5/6・LoadTLG の移植)
+libs/image          画像の読み書き (BMP / PNG / JPEG / TLG / PSD / CLIP)、旧 krkrtpc と同じ前処理、レイヤ書き出し
 web/common          全ツール共通の画面部品 (krt.js / krt.css: フォルダ・ファイル選択ほか)
 tools/<ツール>/      main.cpp (CLI + API) と web/ (画面)
 ```
