@@ -17,6 +17,7 @@
 | `krkrcheck` | ファイル破損チェックツール | 動作確認済み (Windows) |
 | `krkrsign` | キー生成・署名ツール | 動作確認済み (Windows) |
 | `krkrxp3` | xp3 アーカイブツール (作成・一覧・展開・検証) | 動作確認済み (Windows) |
+| `krkraudio` | 音声フォーマットコンバータ (変換・音量・口パク用の音量) | 動作確認済み (Windows) |
 
 ### krkrcheck — ファイル破損チェックツール
 
@@ -64,6 +65,27 @@ krkrxp3 --cli verify  <xp3>
 - 本体 (krkrz) で読めること、旧リリーサの xp3 を読めることを確認済み
 - 暗号化 (旧 `xp3enc.dll`) と Ogg Vorbis のコードブック共有は未対応
 
+### krkraudio — 音声フォーマットコンバータ
+
+```
+krkraudio [<ファイル>...]                       画面を開く
+krkraudio --cli info     <ファイル>...
+krkraudio --cli convert  <ファイル>... --to=ogg|opus|wav [--out=DIR]
+                         [--quality=Q] [--bitrate=KBPS] [--bits=16|24|32]
+                         [--gain=DB] [--normalize=LUFS] [--replaygain] [--force]
+krkraudio --cli loudness <ファイル>...
+krkraudio --cli lipsync  <ファイル> [--fps=30] [--format=json|csv] [--out=FILE]
+```
+
+- 入力は WAV (PCM 8/16/24/32bit・float)、Ogg Vorbis、Ogg Opus。出力は Ogg Vorbis / Ogg Opus / WAV
+- «ファイル.sli» (ループ情報) があれば変換先にも書き出す。Opus は 48kHz になるので位置を換算する
+- 音量: `--gain` は Opus ならヘッダゲイン (波形は変えない。本体は常に適用)、Vorbis / WAV は波形に焼き込む。
+  `--normalize=-18` で統合ラウドネス (EBU R128) を揃える。`--replaygain` は Vorbis に
+  `REPLAYGAIN_TRACK_GAIN` / `PEAK` を書く (本体を `-ogg_rg=track` で起動したときに効く)。
+  Opus を Opus 以外へ変換するときは元のヘッダゲインを焼き込む
+- `lipsync`: 一定間隔ごとの音量 (RMS とピーク、0〜1)。口パクの開き具合に使う (出力形式は暫定。母音の推定は今後)
+- 本体 (krkrz) で、変換した音声と .sli を開けることを確認済み
+
 ### 共通のオプション
 
 - `--cli` … 画面を開かずに処理して終わる
@@ -93,6 +115,8 @@ cmake/KrtTool.cmake krt_add_tool(): ツールの exe + 画面の埋め込み
 libs/app            共通の枠 (GUI / CLI の振り分け、長い処理の実行と進捗、パス変換)
 libs/sig            電子署名 (検証・鍵生成・署名)
 libs/xp3            xp3 アーカイブの読み書き
+libs/loop           ループ情報 (.sli) の読み書き
+libs/audio          音声の読み書き (WAV / Vorbis / Opus) とラウドネス・音量
 web/common          全ツール共通の画面部品 (krt.js / krt.css: フォルダ・ファイル選択ほか)
 tools/<ツール>/      main.cpp (CLI + API) と web/ (画面)
 ```

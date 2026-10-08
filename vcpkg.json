@@ -4,6 +4,12 @@
     "dependencies": [
         "libtomcrypt",
         "libtommath",
-        "zlib"
+        "zlib",
+        "libogg",
+        "libvorbis",
+        "opus",
+        "opusfile",
+        "libopusenc",
+        "libebur128"
     ]
 }

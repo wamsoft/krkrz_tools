@@ -25,6 +25,8 @@ HTTP + SSE + browser app-mode window). **Every tool must also run headless from 
   (UTF-8 ⇔ `std::filesystem::path`; **always** convert through `krt::toPath` / `krt::fromPath`).
 - `libs/sig` (`krt_sig`) — signatures (libtomcrypt / libtommath from vcpkg).
 - `libs/xp3` (`krt_xp3`) — xp3 read / write (zlib from vcpkg).
+- `libs/loop` (`krt_loop`) — `.sli` loop info; the parser is a port of the engine's `WaveLoopManager::ReadInformation` (keep it rejecting exactly what the engine rejects, incl. non-UTF-8 label names).
+- `libs/audio` (`krt_audio`) — WAV / Ogg Vorbis / Ogg Opus decode + encode (libvorbis, opusfile, libopusenc), loudness (libebur128), per-frame levels.
 - `web/common` — shared UI (`krt.js`: init, job watching, folder / file picker; `krt.css`).
 - `tools/<name>/` — `main.cpp` (options, CLI path, `IModule` with the tool's API) + `web/`.
 
@@ -56,6 +58,9 @@ must reference them from there instead of copying them — same convention as kr
     `segm` (28-byte records) / `adlr` chunks, UTF-16LE names, bit31 = protected). We write the
     krkrrel «cushion» header. Cross-check by reading `<arc>.xp3>name` from a krkrz64 startup script
     (e.g. `Storages.getMD5HashString`) and by reading an xp3 made by the legacy `krkrrel.exe`.
+  - audio: the engine always applies the Opus header gain (Q7.8) and plays Opus at 48 kHz (`.sli`
+    positions are 48 kHz samples); Vorbis `replaygain_track_gain` / `album_gain` comments apply only
+    with `-ogg_rg=track|album`. Cross-check by opening outputs with `WaveSoundBuffer.open` in krkrz64.
 - Legacy test vectors: `kirikiri2/tests/sigcheck/` in the Kirikiri2 repo (an old private key and its `.sig`).
 
 ## Conventions

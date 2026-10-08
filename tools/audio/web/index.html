@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>音声フォーマットコンバータ</title>
+<link rel="stylesheet" href="./common/krt.css">
+<style>
+	.page[hidden] { display: none; }
+	.scroll { max-height: 260px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; }
+	.opts { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; }
+	.opts input[type=text] { width: 5em; }
+	td.msg { color: var(--muted); font-size: 12px; }
+	#lipText { height: 160px; }
+</style>
+</head>
+<body>
+<header class="krt-header"><h1>音声フォーマットコンバータ</h1></header>
+<main class="krt-main">
+	<div class="krt-row">
+		<label class="krt-label">ファイル</label>
+		<button id="add">追加…</button>
+		<button id="clear">クリア</button>
+		<span class="krt-note">WAV / Ogg Vorbis / Ogg Opus。«ファイル.sli» (ループ情報) があれば変換先にも書き出します。</span>
+	</div>
+	<div class="scroll">
+		<table class="krt-table">
+			<thead><tr><th>ファイル</th><th>形式</th><th class="num">Hz</th><th class="num">ch</th><th class="num">秒</th><th>ゲイン</th><th>.sli</th></tr></thead>
+			<tbody id="files"></tbody>
+		</table>
+	</div>
+</main>
+<nav class="krt-tabs">
+	<button data-page="convert" class="active">変換</button>
+	<button data-page="loudness">音量の測定</button>
+	<button data-page="lipsync">口パク用の音量</button>
+</nav>
+<main class="krt-main">
+	<section class="page" id="page-convert">
+		<div class="opts">
+			<label>変換先 <select id="to"><option value="ogg">Ogg Vorbis</option><option value="opus">Ogg Opus</option><option value="wav">WAV</option></select></label>
+			<label id="qWrap">品質 <input type="text" id="quality" value="0.4"> (-0.1 〜 1.0)</label>
+			<label id="bWrap" hidden>ビットレート <input type="text" id="bitrate" value="0"> kbps (0 = 自動)</label>
+			<label id="wWrap" hidden>ビット数 <select id="bits"><option>16</option><option>24</option><option value="32">32 (float)</option></select></label>
+		</div>
+		<div class="opts">
+			<label>音量 <input type="text" id="gain" value="0"> dB</label>
+			<label><input type="checkbox" id="doNormalize"> ラウドネスを <input type="text" id="normalize" value="-18"> LUFS に揃える</label>
+			<label id="rgWrap"><input type="checkbox" id="replaygain"> ReplayGain タグを書く (本体を -ogg_rg=track で起動したとき有効)</label>
+		</div>
+		<div class="krt-note" id="gainNote"></div>
+		<div class="krt-row">
+			<label class="krt-label">出力フォルダ</label>
+			<input type="text" id="outDir" spellcheck="false" placeholder="空 = 元のファイルと同じフォルダ">
+			<button id="outBrowse">参照…</button>
+			<label><input type="checkbox" id="force"> 上書き</label>
+		</div>
+		<div class="krt-row"><button id="convert" class="primary">変換する</button><button id="cancel" disabled>中断</button></div>
+	</section>
+	<section class="page" id="page-loudness" hidden>
+		<div class="krt-note">統合ラウドネス (EBU R128) とピークを測ります。本体で鳴る音量 (Opus はヘッダゲイン込み) で表示します。</div>
+		<div class="krt-row"><button id="measure" class="primary">測定する</button></div>
+	</section>
+	<section class="page" id="page-lipsync" hidden>
+		<div class="krt-note">一定間隔ごとの音量 (RMS とピーク、0〜1) を出力します。口パクの開き具合に使えます (一覧の先頭のファイルが対象)。</div>
+		<div class="opts">
+			<label>1 秒あたり <input type="text" id="fps" value="30"> 個</label>
+			<label>形式 <select id="lipFormat"><option value="json">JSON</option><option value="csv">CSV</option></select></label>
+			<label>保存先 <input type="text" id="lipOut" spellcheck="false" style="width: 28em" placeholder="空 = 保存しない"></label>
+		</div>
+		<div class="krt-row"><button id="lipRun" class="primary">出力する</button></div>
+		<textarea id="lipText" class="krt-text" readonly></textarea>
+	</section>
+
+	<div id="jobArea" hidden>
+		<div id="progress" class="krt-progress"><div></div></div>
+		<div id="jobStatus" class="krt-note"></div>
+		<div class="scroll"><table class="krt-table"><tbody id="results"></tbody></table></div>
+	</div>
+</main>
+<script type="module" src="./app.js"></script>
+</body>
+</html>
