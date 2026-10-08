@@ -152,4 +152,5 @@ tools/<ツール>/      main.cpp (CLI + API) と web/ (画面)
 
 ## ライセンス
 
-未定 (吉里吉里Z 本体に合わせる予定)。
+吉里吉里Z 本体と同じ条件 ([LICENSE](LICENSE))。TLG・.sli・xp3 の読み書きには本体のコードを移植した部分がある。
+submodule と vcpkg のライブラリはそれぞれのライセンスに従う。
