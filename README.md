@@ -16,6 +16,7 @@
 |---|---|---|
 | `krkrcheck` | ファイル破損チェックツール | 動作確認済み (Windows) |
 | `krkrsign` | キー生成・署名ツール | 動作確認済み (Windows) |
+| `krkrxp3` | xp3 アーカイブツール (作成・一覧・展開・検証) | 動作確認済み (Windows) |
 
 ### krkrcheck — ファイル破損チェックツール
 
@@ -43,6 +44,25 @@ krkrsign --cli verify --key=<公開鍵> <ファイル>...
 - 吉里吉里の exe (署名領域を持つもの) は exe の中へ、それ以外は «ファイル名.sig» へ署名を書く
 - 旧 krkrsign の鍵で署名でき、旧ツールで作った署名を検証できる。本体の sigcheck プラグインで検証できることも確認済み
 - 別の鍵で作った署名・壊れた署名は «破損» と表示する (本体の sigcheck はこれを «エラー (-2)» として返す)
+
+### krkrxp3 — xp3 アーカイブツール
+
+```
+krkrxp3 [<フォルダ> | <xp3>]                    画面を開く
+krkrxp3 --cli pack <フォルダ> [--out=FILE] [--rpf=FILE] [--protect]
+                 [--no-compress-index] [--size-limit=KB | --no-size-limit] [--save-rpf=FILE]
+krkrxp3 --cli list    <xp3> [--json]
+krkrxp3 --cli extract <xp3> [--out=DIR]
+krkrxp3 --cli verify  <xp3>
+```
+
+- 吉里吉里2 のリリーサ (krkrrel) と同じ書式・同じ既定の分類 (拡張子ごとに 圧縮 / 格納のみ / 入れない) で作る。
+  中身が同じファイルは格納を共有する。フォルダに `default.rpf` (リリーサのプロファイル) があれば読む
+- `.` で始まる名前と CVS フォルダは入れない。圧縮しても小さくならないファイルは圧縮せずに格納する
+- 展開プロテクト付きのファイルは展開しない (一覧と検証はできる)
+- 吉里吉里2 の exe に結合された xp3 も読める
+- 本体 (krkrz) で読めること、旧リリーサの xp3 を読めることを確認済み
+- 暗号化 (旧 `xp3enc.dll`) と Ogg Vorbis のコードブック共有は未対応
 
 ### 共通のオプション
 
@@ -72,6 +92,7 @@ external/appserve   ブラウザ UI のフレームワーク (submodule)
 cmake/KrtTool.cmake krt_add_tool(): ツールの exe + 画面の埋め込み
 libs/app            共通の枠 (GUI / CLI の振り分け、長い処理の実行と進捗、パス変換)
 libs/sig            電子署名 (検証・鍵生成・署名)
+libs/xp3            xp3 アーカイブの読み書き
 web/common          全ツール共通の画面部品 (krt.js / krt.css: フォルダ・ファイル選択ほか)
 tools/<ツール>/      main.cpp (CLI + API) と web/ (画面)
 ```

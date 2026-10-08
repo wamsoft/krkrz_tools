@@ -24,6 +24,7 @@ HTTP + SSE + browser app-mode window). **Every tool must also run headless from 
   `Progress` (the only interface processing code talks to; `ConsoleProgress` for CLI), `Text.h`
   (UTF-8 ⇔ `std::filesystem::path`; **always** convert through `krt::toPath` / `krt::fromPath`).
 - `libs/sig` (`krt_sig`) — signatures (libtomcrypt / libtommath from vcpkg).
+- `libs/xp3` (`krt_xp3`) — xp3 read / write (zlib from vcpkg).
 - `web/common` — shared UI (`krt.js`: init, job watching, folder / file picker; `krt.css`).
 - `tools/<name>/` — `main.cpp` (options, CLI path, `IModule` with the tool's API) + `web/`.
 
@@ -50,6 +51,11 @@ must reference them from there instead of copying them — same convention as kr
     result as that plugin. Cross-check by running the engine with a startup script that calls
     `Window.checkSignature` (see "Testing").
   - keys: RSA PKCS#1 PEM (`rsa_export` **without** `PK_STD`), 64-column lines, CRLF.
+  - xp3: must stay readable by the engine reader `krkrz_dev/src/core/common/base/XP3Archive.cpp`
+    (header mark, I64 index pointer, index flag 0 raw / 1 zlib / 0x80 continue, `File` → `info` /
+    `segm` (28-byte records) / `adlr` chunks, UTF-16LE names, bit31 = protected). We write the
+    krkrrel «cushion» header. Cross-check by reading `<arc>.xp3>name` from a krkrz64 startup script
+    (e.g. `Storages.getMD5HashString`) and by reading an xp3 made by the legacy `krkrrel.exe`.
 - Legacy test vectors: `kirikiri2/tests/sigcheck/` in the Kirikiri2 repo (an old private key and its `.sig`).
 
 ## Conventions

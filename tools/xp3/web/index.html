@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>xp3 アーカイブツール</title>
+<link rel="stylesheet" href="./common/krt.css">
+<style>
+	.page[hidden] { display: none; }
+	.scroll { max-height: 340px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; }
+	td.msg { color: var(--muted); font-size: 12px; }
+	.opts { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; }
+	#limitKB { width: 6em; }
+</style>
+</head>
+<body>
+<header class="krt-header"><h1>xp3 アーカイブツール</h1></header>
+<nav class="krt-tabs">
+	<button data-page="pack" class="active">作成</button>
+	<button data-page="view">中身を見る</button>
+</nav>
+<main class="krt-main">
+	<section class="page" id="page-pack">
+		<div class="krt-note">フォルダの中身から xp3 を作ります (吉里吉里2 のリリーサと同じ書式)。'.' で始まる名前と CVS フォルダは入りません。</div>
+		<div class="krt-row">
+			<label class="krt-label">元のフォルダ</label>
+			<input type="text" id="dir" spellcheck="false">
+			<button id="dirBrowse">参照…</button>
+		</div>
+		<div class="krt-row">
+			<label class="krt-label">出力ファイル</label>
+			<input type="text" id="out" spellcheck="false">
+		</div>
+		<div id="rpfNote" class="krt-note"></div>
+		<div class="scroll">
+			<table class="krt-table">
+				<thead><tr><th>拡張子</th><th class="num">数</th><th class="num">サイズ</th><th>扱い</th></tr></thead>
+				<tbody id="exts"></tbody>
+			</table>
+		</div>
+		<div class="opts">
+			<label><input type="checkbox" id="doLimit" checked> <input type="text" id="limitKB" value="1024"> KB 以上のファイルは圧縮しない</label>
+			<label><input type="checkbox" id="compressIndex" checked> インデックスを圧縮する</label>
+			<label><input type="checkbox" id="protect"> 展開プロテクト</label>
+			<label><input type="checkbox" id="saveRpf"> 設定を default.rpf に保存</label>
+		</div>
+		<div class="krt-row"><button id="packRun" class="primary">作成する</button><button id="cancel1" disabled>中断</button></div>
+	</section>
+
+	<section class="page" id="page-view" hidden>
+		<div class="krt-row">
+			<label class="krt-label">xp3 ファイル</label>
+			<input type="text" id="file" spellcheck="false">
+			<button id="fileBrowse">参照…</button>
+			<button id="open">開く</button>
+		</div>
+		<div id="listNote" class="krt-note"></div>
+		<div class="scroll">
+			<table class="krt-table">
+				<thead><tr><th>名前</th><th class="num">サイズ</th><th class="num">格納サイズ</th><th>圧縮</th><th>保護</th></tr></thead>
+				<tbody id="list"></tbody>
+			</table>
+		</div>
+		<div class="krt-row">
+			<button id="verify">検証</button>
+			<label class="krt-label">展開先</label>
+			<input type="text" id="extractDir" spellcheck="false">
+			<button id="extractBrowse">参照…</button>
+			<button id="extract">展開</button>
+			<button id="cancel2" disabled>中断</button>
+		</div>
+	</section>
+
+	<div id="jobArea" hidden>
+		<div id="progress" class="krt-progress"><div></div></div>
+		<div id="jobStatus" class="krt-note"></div>
+		<div id="jobResult"></div>
+	</div>
+</main>
+<script type="module" src="./app.js"></script>
+</body>
+</html>

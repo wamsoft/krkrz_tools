@@ -56,6 +56,8 @@ include(KrtTool)
 #---------------------------------------------------------------------------
 add_subdirectory(libs/app)
 add_subdirectory(libs/sig)
+add_subdirectory(libs/xp3)
 
 add_subdirectory(tools/filecheck)
 add_subdirectory(tools/sign)
+add_subdirectory(tools/xp3)
