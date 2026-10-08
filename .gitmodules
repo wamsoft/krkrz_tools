@@ -1,0 +1,3 @@
+[submodule "external/appserve"]
+	path = external/appserve
+	url = https://github.com/wamsoft/appserve.git

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ファイル破損チェックツール</title>
+<link rel="stylesheet" href="./common/krt.css">
+<style>
+	#resultWrap { max-height: calc(100vh - 330px); min-height: 160px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; }
+	#summary { font-weight: 600; }
+	td.msg { color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<header class="krt-header"><h1 id="caption">ファイル破損チェックツール</h1></header>
+<main class="krt-main">
+	<div id="notice" class="krt-note"></div>
+	<div id="keyError" class="krt-error" hidden></div>
+
+	<div class="krt-row">
+		<input type="text" id="root" spellcheck="false">
+		<button id="browse">参照…</button>
+	</div>
+
+	<div class="krt-row">
+		<button id="check" class="primary">チェック</button>
+		<button id="cancel" disabled>中断</button>
+		<button id="copy" disabled>結果をコピー</button>
+		<span id="summary"></span>
+	</div>
+	<div id="progress" class="krt-progress"><div></div></div>
+	<div id="status" class="krt-note"></div>
+
+	<div id="resultWrap">
+		<table class="krt-table">
+			<thead><tr><th>名前</th><th>状態</th><th class="num">サイズ</th><th>更新日時</th><th></th></tr></thead>
+			<tbody id="rows"></tbody>
+		</table>
+	</div>
+</main>
+<script type="module" src="./app.js"></script>
+</body>
+</html>

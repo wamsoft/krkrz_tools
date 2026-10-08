@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>キー生成・署名ツール</title>
+<link rel="stylesheet" href="./common/krt.css">
+<style>
+	.page[hidden] { display: none; }
+	#signFiles, #verifyFiles { min-height: 90px; }
+	.results { max-height: 280px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; }
+	td.msg { color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<header class="krt-header"><h1>キー生成・署名ツール</h1></header>
+<nav class="krt-tabs">
+	<button data-page="keygen" class="active">鍵の生成</button>
+	<button data-page="sign">署名</button>
+	<button data-page="verify">署名の確認</button>
+</nav>
+
+<main class="krt-main">
+	<!-- 鍵の生成 -->
+	<section class="page" id="page-keygen">
+		<div class="krt-note">署名に使う鍵の組 (公開鍵と秘密鍵) を作ります。公開鍵はゲームやファイル破損チェックツールに組み込み、秘密鍵は署名する人だけが持ちます。<b>秘密鍵は外に出さないでください。</b></div>
+		<div class="krt-row">
+			<label class="krt-label">鍵の長さ</label>
+			<select id="bits">
+				<option value="1024" selected>1024 bit (吉里吉里2 のツールと同じ)</option>
+				<option value="2048">2048 bit</option>
+				<option value="3072">3072 bit</option>
+				<option value="4096">4096 bit</option>
+			</select>
+			<button id="keygen" class="primary">鍵を作る</button>
+		</div>
+		<label class="krt-label">公開鍵</label>
+		<textarea id="publicKey" class="krt-text" rows="6" readonly></textarea>
+		<label class="krt-label">秘密鍵</label>
+		<textarea id="privateKey" class="krt-text" rows="10" readonly></textarea>
+		<div class="krt-row">
+			<label class="krt-label">保存先フォルダ</label>
+			<input type="text" id="saveDir" spellcheck="false">
+			<button id="saveDirBrowse">参照…</button>
+		</div>
+		<div class="krt-row">
+			<label class="krt-label">ファイル名</label>
+			<input type="text" id="publicName" value="public.txt" spellcheck="false">
+			<input type="text" id="privateName" value="private.txt" spellcheck="false">
+			<label><input type="checkbox" id="overwrite"> 上書き</label>
+			<button id="saveKeys" disabled>保存</button>
+		</div>
+		<div id="keygenStatus" class="krt-note"></div>
+	</section>
+
+	<!-- 署名 -->
+	<section class="page" id="page-sign" hidden>
+		<div class="krt-note">選んだファイルに署名します。吉里吉里の exe (署名領域を持つもの) は exe の中へ、それ以外は «ファイル名.sig» へ書きます。</div>
+		<div class="krt-row">
+			<label class="krt-label">秘密鍵</label>
+			<input type="text" id="signKey" spellcheck="false">
+			<button id="signKeyBrowse">参照…</button>
+		</div>
+		<div class="krt-row">
+			<label class="krt-label">対象ファイル</label>
+			<button id="signAdd">追加…</button>
+			<button id="signClear">クリア</button>
+		</div>
+		<textarea id="signFiles" class="krt-text" spellcheck="false" placeholder="1 行に 1 ファイル"></textarea>
+		<div class="krt-row"><button id="signRun" class="primary">署名する</button></div>
+	</section>
+
+	<!-- 確認 -->
+	<section class="page" id="page-verify" hidden>
+		<div class="krt-note">署名が正しいかを公開鍵で確かめます。</div>
+		<div class="krt-row">
+			<label class="krt-label">公開鍵</label>
+			<input type="text" id="verifyKey" spellcheck="false">
+			<button id="verifyKeyBrowse">参照…</button>
+		</div>
+		<div class="krt-row">
+			<label class="krt-label">対象ファイル</label>
+			<button id="verifyAdd">追加…</button>
+			<button id="verifyClear">クリア</button>
+		</div>
+		<textarea id="verifyFiles" class="krt-text" spellcheck="false" placeholder="1 行に 1 ファイル"></textarea>
+		<div class="krt-row"><button id="verifyRun" class="primary">確認する</button></div>
+	</section>
+
+	<div id="jobArea" hidden>
+		<div id="progress" class="krt-progress"><div></div></div>
+		<div id="jobStatus" class="krt-note"></div>
+		<div class="results">
+			<table class="krt-table"><thead><tr><th>ファイル</th><th>結果</th><th></th></tr></thead><tbody id="rows"></tbody></table>
+		</div>
+	</div>
+</main>
+<script type="module" src="./app.js"></script>
+</body>
+</html>

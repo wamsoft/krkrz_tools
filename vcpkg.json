@@ -1,0 +1,8 @@
+{
+    "name": "krkrz-tools",
+    "version": "0.1.0",
+    "dependencies": [
+        "libtomcrypt",
+        "libtommath"
+    ]
+}
