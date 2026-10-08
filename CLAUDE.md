@@ -37,6 +37,10 @@ HTTP + SSE + browser app-mode window). **Every tool must also run headless from 
 - `libs/image` (`krt_image`) — BMP (own) / PNG (libpng) / JPEG (libjpeg-turbo) / TLG / PSD (psdparse) /
   CLIP (clipparse) loading, saving, and the legacy krkrtpc preprocessing (`expandOpaqueColor` etc. follow
   `kirikiri2/src/tools/win32/krdevui/tpc/TPCMainUnit.cpp` exactly); `Layers.h` = per-layer extraction.
+- `tools/loop/web/loop-worklet.js` — AudioWorklet port of the engine's `WaveLoopManager::Decode` /
+  `GetNearestEvent` / `EvalLabelExpression` (link order, conditions, 50 ms smooth crossfade, `:` label
+  expressions, give-up after 10 consecutive jumps). Keep it behaving exactly like the engine. Can be
+  exercised headlessly in Node by stubbing `AudioWorkletProcessor` / `registerProcessor` / `sampleRate`.
 - `web/common` — shared UI (`krt.js`: init, job watching, folder / file picker; `krt.css`).
 - `tools/<name>/` — `main.cpp` (options, CLI path, `IModule` with the tool's API) + `web/`.
 

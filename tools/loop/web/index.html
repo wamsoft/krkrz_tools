@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ループチューナ</title>
+<link rel="stylesheet" href="./common/krt.css">
+<style>
+	html, body { height: 100%; }
+	body { display: flex; flex-direction: column; overflow: hidden; }
+	.bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--line); }
+	.bar button { padding: 4px 10px; }
+	.bar .sep { width: 1px; align-self: stretch; background: var(--line); margin: 0 4px; }
+	.bar label { display: inline-flex; gap: 4px; align-items: center; color: var(--muted); }
+	#file { color: var(--muted); margin-left: auto; max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	.body { flex: 1; display: flex; min-height: 0; }
+	.views { flex: 1; display: flex; flex-direction: column; min-width: 0; padding: 8px; gap: 6px; }
+	#overview { height: 48px; width: 100%; border: 1px solid var(--line); border-radius: 4px; cursor: pointer; }
+	#wave { flex: 1; width: 100%; min-height: 160px; border: 1px solid var(--line); border-radius: 4px; outline: none; }
+	.side { width: 300px; border-left: 1px solid var(--line); overflow: auto; padding: 8px; display: flex; flex-direction: column; gap: 10px; background: var(--panel); }
+	.side h2 { font-size: 13px; margin: 0 0 4px; color: var(--muted); font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+	.side h2 button { padding: 1px 8px; font-size: 12px; }
+	.list { font-size: 12px; font-variant-numeric: tabular-nums; }
+	.list div { padding: 2px 4px; border-radius: 3px; cursor: default; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+	.list div:hover { background: var(--bg); }
+	.list div.sel { background: var(--accent); color: #fff; }
+	.flags { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; font-size: 12px; }
+	.flags label { display: flex; flex-direction: column; color: var(--muted); }
+	.flags input { width: 100%; padding: 2px 4px; font: inherit; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); color: var(--fg); }
+	.flags input.changed { border-color: var(--warn); }
+	.status { display: flex; gap: 16px; padding: 4px 12px; border-top: 1px solid var(--line); background: var(--panel); color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+	.status .msg { margin-left: auto; }
+	.status .bad { color: var(--bad); }
+	.dlg-grid { display: grid; grid-template-columns: auto 1fr; gap: 6px 10px; align-items: center; }
+	.dlg-grid input[type=text], .dlg-grid select { font: inherit; padding: 4px 6px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); color: var(--fg); }
+	.hint { color: var(--muted); font-size: 12px; white-space: pre-wrap; }
+	.empty { color: var(--muted); padding: 40px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="bar">
+	<button id="open" title="音声ファイルを開く (Ctrl+O)">開く…</button>
+	<button id="save" title=".sli を保存 (Ctrl+S)" disabled>保存</button>
+	<span class="sep"></span>
+	<button id="undo" title="元に戻す (Ctrl+Z)" disabled>↶</button>
+	<button id="redo" title="やり直し (Ctrl+Y)" disabled>↷</button>
+	<span class="sep"></span>
+	<button id="play" title="キャレットから再生 / 停止 (Space)" disabled>▶ 再生</button>
+	<button id="playTop" title="先頭から再生 (Home)" disabled>⏮ 先頭から</button>
+	<button id="preview" title="選んだリンクの 2 秒手前から 4 秒再生 (P)" disabled>リンク試聴</button>
+	<span class="sep"></span>
+	<button id="zoomIn" title="拡大 (Ctrl+ホイール / +)">＋</button>
+	<button id="zoomOut" title="縮小 (-)">－</button>
+	<button id="zoomAll" title="全体を表示 (0)">全体</button>
+	<span class="sep"></span>
+	<button id="addLink" title="選択範囲の終わり → 始まりへのリンク (L)" disabled>リンク追加</button>
+	<button id="addLabel" title="キャレット位置にラベル (B)" disabled>ラベル追加</button>
+	<button id="remove" title="選んだリンク / ラベルを削除 (Delete)" disabled>削除</button>
+	<span class="sep"></span>
+	<label title="再生中、表示を再生位置に合わせる"><input type="checkbox" id="follow" checked> 追従</label>
+	<label title="ドラッグした位置を近くのゼロクロスに合わせる"><input type="checkbox" id="snap" checked> ゼロクロス</label>
+	<label title="末尾まで来たら先頭に戻る (WaveSoundBuffer.looping)"><input type="checkbox" id="looping"> 末尾で先頭へ</label>
+	<label title="リンクを無視して再生"><input type="checkbox" id="ignoreLinks"> リンク無視</label>
+	<span id="file"></span>
+</div>
+<div class="body">
+	<div class="views">
+		<canvas id="overview"></canvas>
+		<canvas id="wave" tabindex="0"></canvas>
+	</div>
+	<div class="side">
+		<div>
+			<h2>リンク <button id="addLink2" title="リンクを追加">＋</button></h2>
+			<div id="links" class="list"></div>
+		</div>
+		<div>
+			<h2>ラベル <button id="addLabel2" title="ラベルを追加">＋</button></h2>
+			<div id="labels" class="list"></div>
+		</div>
+		<div>
+			<h2>フラグ <button id="resetFlags" title="すべて 0 に">0 に戻す</button></h2>
+			<div id="flags" class="flags"></div>
+			<div class="hint">条件付きリンクが見るフラグ (0〜9999)。再生中は «:» で始まるラベル (:[0]=1 など) を通ると変わる。</div>
+		</div>
+	</div>
+</div>
+<div class="status">
+	<span id="stCaret"></span>
+	<span id="stSel"></span>
+	<span id="stPlay"></span>
+	<span id="stZoom"></span>
+	<span class="msg" id="stMsg"></span>
+</div>
+<script type="module" src="./app.js"></script>
+</body>
+</html>
