@@ -150,6 +150,10 @@ cmake --build --preset windows-rel
 
 成果物は `build/<preset>/tools/<ツール>/Release/<ツール>.exe`。画面 (web/) は exe に埋め込まれるので exe 1 本で動く。
 
+確認済みの環境 (2026-10-09): Windows x64 (VS 2022)、Linux x64 (Steam Linux Runtime 3.0 «sniper» SDK で
+GLIBC 2.30 以下・libstdc++ 依存なし。ホストの直接ビルドも可)、macOS x64 (Intel、`macos-x64`)。
+Apple Silicon (`macos`) は未確認。
+
 吉里吉里Z 本体のソースを使うツール (今後の xp3 / 画像 / 音声など) は、環境変数 `KRKRZ_BASE` に
 krkrz_dev を置いているフォルダの親を設定する (krkrz_android / krkrz_linux と同じ)。
 
