@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <cstdio>
+#include <vector>
 
 #ifdef _WIN32
 #include <io.h>
@@ -36,13 +37,15 @@ int displayWidth(uint32_t cp)
 	return 1;
 }
 
-/// UTF-8 の文字の境界で、表示幅 maxCols 桁までに切り、足りなければ空白で埋める。
+/// 表示幅 maxCols 桁に収める。長いときは末尾 (ファイル名の側) を残して前を «...» で省く
+/// (同じフォルダの中のファイルが同じ表示にならないように)。足りなければ空白で埋める。
 /// printf の %-60.60s はバイト単位で切るので日本語の途中で切れ、文字数で切ると
 /// 全角の多い行が端末の幅を超えて折り返し、«\r» で書き戻しても前の行が残る
 std::string fitText(const std::string& s, int maxCols)
 {
-	std::string out;
-	int cols = 0;
+	struct Ch { size_t pos, len; int w; };
+	std::vector<Ch> chars;
+	int total = 0;
 	for (size_t i = 0; i < s.size();) {
 		const unsigned char c = (unsigned char)s[i];
 		const size_t n = c < 0x80 ? 1 : (c & 0xe0) == 0xc0 ? 2 : (c & 0xf0) == 0xe0 ? 3 : (c & 0xf8) == 0xf0 ? 4 : 1;
@@ -50,10 +53,24 @@ std::string fitText(const std::string& s, int maxCols)
 		uint32_t cp = n == 1 ? c : (c & (0xff >> (n + 1)));
 		for (size_t k = 1; k < n; ++k) cp = (cp << 6) | ((unsigned char)s[i + k] & 0x3f);
 		const int w = displayWidth(cp);
-		if (cols + w > maxCols) break;
-		out.append(s, i, n);
+		chars.push_back({ i, n, w });
+		total += w;
 		i += n;
-		cols += w;
+	}
+	std::string out;
+	int cols = 0;
+	if (total <= maxCols) {
+		for (const auto& ch : chars) out.append(s, ch.pos, ch.len);
+		cols = total;
+	} else {
+		// 末尾から maxCols - 3 桁ぶん (先頭の «...» の 3 桁を除く) を拾う。«…» (U+2026) は
+		// 日本語環境の端末で 2 桁になることがあり幅がずれるので、半角の «...» を使う
+		size_t first = chars.size();
+		int w = 0;
+		while (first > 0 && w + chars[first - 1].w <= maxCols - 3) w += chars[--first].w;
+		out = "...";
+		for (size_t k = first; k < chars.size(); ++k) out.append(s, chars[k].pos, chars[k].len);
+		cols = w + 3;
 	}
 	out.append((size_t)(maxCols - cols), ' ');
 	return out;
