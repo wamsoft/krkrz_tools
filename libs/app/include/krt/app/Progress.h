@@ -22,7 +22,7 @@ public:
 	virtual bool canceled() const = 0;
 };
 
-/// CLI 用: 進捗は標準エラーへ 1 行で上書き表示、ログは標準エラーへ行で出す
+/// CLI 用: 進捗は標準エラーへ 1 行で上書き表示 (端末のときだけ)、ログは標準エラーへ行で出す
 class ConsoleProgress : public Progress {
 public:
 	explicit ConsoleProgress(bool quiet = false) : quiet_(quiet) {}

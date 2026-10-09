@@ -28,7 +28,8 @@
 //   (vpag_*) のタグを、TLG には加えてブレンドモードに対応する mode タグを書く。
 //   PSD はレイヤー効果込み。非表示のレイヤは --hidden を付けたときだけ。
 //
-// --out は相対パスなら入力ファイルのフォルダから見た位置 (旧版と同じ)。
+// --out (CLI) の相対パスはカレントフォルダ基準 (他のツールと同じ)。画面の出力フォルダ欄は
+// 旧版と同じく入力ファイルのフォルダ基準。
 // CLI の終了コード: 0 = 成功 / 2 = 失敗
 //---------------------------------------------------------------------------
 #include <algorithm>
@@ -340,6 +341,11 @@ int runCli(const Settings& s, const std::vector<std::string>& args)
 	krt::ConsoleProgress progress(s.quiet);
 	int rc = 0;
 	Json arr = Json::array();
+	// CLI の --out はカレント基準 (convertOne / exportLayers は相対なら入力のフォルダ基準なので、
+	// ここで絶対パスにしておく)
+	ConvertSettings conv = s.conv;
+	if (!conv.outDir.empty() && krt::toPath(conv.outDir).is_relative())
+		conv.outDir = krt::fromPath(fs::absolute(krt::toPath(conv.outDir)));
 
 	if (cmd == "info") {
 		for (const auto& f : files) {
@@ -359,14 +365,14 @@ int runCli(const Settings& s, const std::vector<std::string>& args)
 			for (const auto& [k, v] : img.tags) std::printf("    %s=%s\n", k.c_str(), v.c_str());
 		}
 	} else if (cmd == "convert") {
-		const std::string e = checkSettings(s.conv);
+		const std::string e = checkSettings(conv);
 		if (!e.empty()) { std::fprintf(stderr, "error: %s\n", e.c_str()); return 2; }
 		std::vector<std::string> skipped;
 		const auto list = dropMaskInputs(files, &skipped);
 		for (const auto& f : skipped)
 			if (!s.json) std::printf("省略\t%s\t(メイン画像のマスクとして読む)\n", f.c_str());
 		for (const auto& f : list) {
-			const Json r = convertOne(krt::toPath(f), s.conv, progress);
+			const Json r = convertOne(krt::toPath(f), conv, progress);
 			progress.finish();
 			if (!r["ok"].asBool()) rc = 2;
 			if (s.json) { arr.push(r); continue; }
@@ -380,7 +386,7 @@ int runCli(const Settings& s, const std::vector<std::string>& args)
 		}
 	} else if (cmd == "layers") {
 		for (const auto& f : files) {
-			const Json r = exportLayers(krt::toPath(f), s.conv, s.layer, progress);
+			const Json r = exportLayers(krt::toPath(f), conv, s.layer, progress);
 			progress.finish();
 			if (!r["ok"].asBool()) rc = 2;
 			if (s.json) { arr.push(r); continue; }
@@ -527,7 +533,7 @@ int main(int argc, char** argv)
 	                 [&s](const std::string& v) { s.layer.format = v; return true; } });
 	tool.addOption({ "hidden", "", "layers: 非表示のレイヤも書き出す",
 	                 [&s](const std::string&) { s.layer.hidden = true; return true; } });
-	tool.addOption({ "out", "DIR", "出力フォルダ (相対パスは入力ファイルのフォルダから)",
+	tool.addOption({ "out", "DIR", "出力フォルダ (相対パスはカレントフォルダから)",
 	                 [&s](const std::string& v) { s.conv.outDir = v; return true; } });
 	tool.addOption({ "force", "", "出力先を上書きする",
 	                 [&s](const std::string&) { s.conv.force = true; return true; } });

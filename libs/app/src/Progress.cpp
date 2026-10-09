@@ -2,11 +2,30 @@
 
 #include <cstdio>
 
+#ifdef _WIN32
+#include <io.h>
+#define KRT_ISATTY _isatty
+#define KRT_FILENO _fileno
+#else
+#include <unistd.h>
+#define KRT_ISATTY isatty
+#define KRT_FILENO fileno
+#endif
+
 namespace krt {
+
+namespace {
+/// 標準エラーが端末か (パイプやファイルへのリダイレクトでは «\r» の上書き表示をしない)
+bool stderrIsTerminal()
+{
+	static const bool tty = KRT_ISATTY(KRT_FILENO(stderr)) != 0;
+	return tty;
+}
+} // namespace
 
 void ConsoleProgress::progress(double ratio, const std::string& message)
 {
-	if (quiet_) return;
+	if (quiet_ || !stderrIsTerminal()) return;
 	const int percent = ratio < 0.0 ? -1 : static_cast<int>(ratio * 100.0 + 0.5);
 	if (percent == lastPercent_ && percent >= 0) return;   // 同じ % の連続は省く
 	lastPercent_ = percent;
