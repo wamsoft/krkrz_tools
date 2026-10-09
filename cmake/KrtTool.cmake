@@ -19,6 +19,10 @@
 get_filename_component(KRT_ROOT_DIR "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
 set(KRT_ROOT_DIR "${KRT_ROOT_DIR}" CACHE INTERNAL "")
 
+# cmake --install で exe を置くフォルダ (CMAKE_INSTALL_PREFIX からの相対)。
+# krkrz_dev から ExternalProject で作るときは «.» にして、umbrella 側が tools/ へ集める
+set(KRT_INSTALL_BINDIR "bin" CACHE STRING "ツールの exe を install するフォルダ (prefix からの相対)")
+
 function(krt_add_tool target)
     cmake_parse_arguments(KAT "" "WEB_DIR" "SOURCES;LIBS" ${ARGN})
 
@@ -47,6 +51,8 @@ function(krt_add_tool target)
 
         appserve_embed_web(${target} WEB_DIR "${_stage}" NAME "${target}_web")
     endif()
+
+    install(TARGETS ${target} RUNTIME DESTINATION "${KRT_INSTALL_BINDIR}")
 
     if(WIN32)
         # コンソールから CLI として使うため、サブシステムはコンソールのまま。

@@ -73,3 +73,6 @@ add_subdirectory(tools/xp3)
 add_subdirectory(tools/audio)
 add_subdirectory(tools/image)
 add_subdirectory(tools/loop)
+
+# ライセンス (ツールと同じフォルダに置く)
+install(FILES LICENSE DESTINATION "${KRT_INSTALL_BINDIR}" RENAME krkrz_tools_LICENSE.txt)
