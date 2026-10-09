@@ -125,7 +125,7 @@ krkrrelease --cli template <release.json> [--exe=<吉里吉里の exe>]   設定
 2. リソースの書き換え
    - 埋め込みオプション (`.cf` と同じ書式、`;` はコメント): WINVER は TEXT/139、SDL は BINARY/CONFIG.CF
      (本体同梱の既定値に重ねる)。値に ASCII 以外を含む行は `name="\xNN..."` に直して書く
-   - アイコン (.ico、複数サイズ): 既存のアイコングループを全部差し替え (無ければ 107 を足す)
+   - アイコン (.ico、複数サイズ): 既存のアイコングループを全部差し替え (無ければ WINVER は 107、SDL は MAINICON として足す)
    - バージョン情報: FileDescription / ProductName / CompanyName / LegalCopyright / FileVersion / ProductVersion
      (FileVersion・ProductVersion は数値の版も合わせる)
 3. セキュリティ設定 (`forcedataxp3` / `acceptfilenameargument` / `disablemsgmap` / `disableapplock` /

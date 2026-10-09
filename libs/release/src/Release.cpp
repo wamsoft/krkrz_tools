@@ -389,10 +389,12 @@ Result run(const Settings& s, const fs::path& baseDir, krt::Progress& progress)
 
 		if (!icons.empty()) {
 			// 既存のアイコングループ (WINVER は 107、SDL は MAINICON など) を全部、新しいアイコンに
-			// 差し替える。古いグループが指していた RT_ICON は消す。グループが無ければ 107 として足す
+			// 差し替える。古いグループが指していた RT_ICON は消す。グループが無ければ、WINVER は 107、
+			// SDL は MAINICON (本体の CMake が付ける名前) として足す
 			std::vector<std::wstring> groups = rd.names(RT_GROUP_ICON);
 			const bool hadGroups = !groups.empty();
-			if (!hadGroups) groups.push_back(L"#" + std::to_wstring(kIdiMain));
+			const std::wstring newGroup = info.kind == ExeKind::Winver ? L"#" + std::to_wstring(kIdiMain) : std::wstring(L"MAINICON");
+			if (!hadGroups) groups.push_back(newGroup);
 			WORD glang = MAKELANGID(LANG_NEUTRAL, SUBLANG_NEUTRAL);
 			std::set<uint16_t> used;
 			for (uint16_t id : rd.iconIds()) used.insert(id);
@@ -417,7 +419,7 @@ Result run(const Settings& s, const fs::path& baseDir, krt::Progress& progress)
 			const auto group = pe::buildGroupIcon(icons, ids);
 			for (const auto& gname : groups)
 				update(RT_GROUP_ICON, pe::resName(gname), glang, group.data(), (DWORD)group.size(), "アイコン");
-			r.notes.push_back("アイコンを差し替えた (" + std::to_string(icons.size()) + " 枚" + (hadGroups ? "" : "、グループ 107 を追加") + ")");
+			r.notes.push_back("アイコンを差し替えた (" + std::to_string(icons.size()) + " 枚" + (hadGroups ? "" : info.kind == ExeKind::Winver ? "、グループ 107 を追加" : "、グループ MAINICON を追加") + ")");
 		}
 
 		if (doVersion) {
