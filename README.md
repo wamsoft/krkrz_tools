@@ -144,7 +144,7 @@ krkrimg --cli layers  <PSD / CLIP>... [--format=png|tlg5|tlg6] [--hidden] [--out
 
 ```bash
 git submodule update --init
-cmake --preset windows          # linux / macos
+cmake --preset windows          # linux / macos (Apple Silicon) / macos-x64 (Intel)
 cmake --build --preset windows-rel
 ```
 

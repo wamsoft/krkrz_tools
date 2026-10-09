@@ -29,9 +29,16 @@
         },
         {
             "name": "macos",
-            "description": "macOS arm64 (未検証)",
+            "description": "macOS arm64 / Apple Silicon (未検証)",
             "inherits": "default",
             "cacheVariables": { "VCPKG_TARGET_TRIPLET": "arm64-osx" },
+            "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Darwin" }
+        },
+        {
+            "name": "macos-x64",
+            "description": "macOS x64 / Intel (未検証)",
+            "inherits": "default",
+            "cacheVariables": { "VCPKG_TARGET_TRIPLET": "x64-osx" },
             "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Darwin" }
         }
     ],
@@ -41,6 +48,8 @@
         { "name": "linux",       "configurePreset": "linux",   "configuration": "Debug" },
         { "name": "linux-rel",   "configurePreset": "linux",   "configuration": "Release" },
         { "name": "macos",       "configurePreset": "macos",   "configuration": "Debug" },
-        { "name": "macos-rel",   "configurePreset": "macos",   "configuration": "Release" }
+        { "name": "macos-rel",   "configurePreset": "macos",   "configuration": "Release" },
+        { "name": "macos-x64",     "configurePreset": "macos-x64", "configuration": "Debug" },
+        { "name": "macos-x64-rel", "configurePreset": "macos-x64", "configuration": "Release" }
     ]
 }
