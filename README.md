@@ -19,6 +19,7 @@
 | `krkrxp3` | xp3 アーカイブツール (作成・一覧・展開・検証) | 動作確認済み (Windows) |
 | `krkraudio` | 音声フォーマットコンバータ (変換・音量・口パク用の音量) | 動作確認済み (Windows) |
 | `krkrloop` | ループチューナ (波形を見ながら .sli のリンク・ラベルを編集、本体と同じ規則のループ再生) | 動作確認済み (Windows) |
+| `krkrrelease` | リリーサ (配布用の exe を作る: 埋め込みオプション・アイコン・バージョン情報・セキュリティ設定・xp3・署名。**Windows 専用**) | 動作確認済み (Windows) |
 | `krkrimg` | 画像フォーマットコンバータ (旧 krkrtpc の後継。PSD / CLIP の合成・レイヤ書き出し) | 動作確認済み (Windows) |
 
 ### krkrcheck — ファイル破損チェックツール
@@ -108,6 +109,57 @@ krkrloop --cli check <音声ファイル>...          .sli を本体が読めて
 - 操作: Space 再生 / 停止、Home 先頭から、Ctrl+ホイール 拡大縮小、L リンク追加 (選択範囲の終わり → 始まり)、
   B ラベル追加、P リンク試聴、Delete 削除、Ctrl+Z / Ctrl+Y、Ctrl+S 保存、Ctrl+E WAV 書き出し
 
+### krkrrelease — リリーサ (Windows 専用)
+
+```
+krkrrelease [<release.json>]                      画面を開く
+krkrrelease --cli run      <release.json> [--force]
+krkrrelease --cli info     <exe>                  埋め込みオプション・セキュリティ設定・版情報を表示
+krkrrelease --cli template <release.json> [--exe=<吉里吉里の exe>]   設定ファイルのひな形を書く
+```
+
+吉里吉里Z の exe (WINVER 版 / SDL 版の Windows) から配布用の exe を作る。設定は JSON (`release.json`) に
+保存し、画面でも CLI でも同じものを使う (相対パスは設定ファイルのフォルダ基準)。処理の順序:
+
+1. exe をコピーして改名 (元の exe は書き換えない。後ろにデータが付いた exe は元にできない)
+2. リソースの書き換え
+   - 埋め込みオプション (`.cf` と同じ書式、`;` はコメント): WINVER は TEXT/139、SDL は BINARY/CONFIG.CF
+     (本体同梱の既定値に重ねる)。値に ASCII 以外を含む行は `name="\xNN..."` に直して書く
+   - アイコン (.ico、複数サイズ): 既存のアイコングループを全部差し替え (無ければ 107 を足す)
+   - バージョン情報: FileDescription / ProductName / CompanyName / LegalCopyright / FileVersion / ProductVersion
+     (FileVersion・ProductVersion は数値の版も合わせる)
+3. セキュリティ設定 (`forcedataxp3` / `acceptfilenameargument` / `disablemsgmap` / `disableapplock` /
+   WINVER は `disabled3d9`) の数字を同じ長さで書き換える
+4. データ: `none` / `copy` (exe の隣に data.xp3) / `bind` (exe の後ろに 16 バイト境界で結合)。フォルダを
+   指定すると xp3 を作る (フォルダの default.rpf か `rpf` のプロファイル)
+5. 署名 (秘密鍵を指定したとき): exe と、隣に置いた xp3 の `.sig` を作る。**必ず最後**
+
+設定ファイルの例 (`krkrrelease --cli template` が書くもの):
+
+```json
+{
+ "exe": "krkrz64.exe",
+ "output": "release/game.exe",
+ "setOptions": true,
+ "options": "; 起動オプション\n",
+ "icon": "game.ico",
+ "version": { "FileDescription": "", "ProductName": "", "CompanyName": "", "LegalCopyright": "", "FileVersion": "", "ProductVersion": "" },
+ "security": { "acceptfilenameargument": 0, "forcedataxp3": 1 },
+ "dataMode": "copy",
+ "data": "data",
+ "rpf": "",
+ "dataName": "data.xp3",
+ "signKey": "private.txt"
+}
+```
+
+- 空の値の項目は変えない。`security` には変える項目だけを書く
+- 作った exe を後から書き換える (Authenticode・DRM など) と署名が合わなくなるので、その後に `.sig` を作り直す
+  (`krkrsign --cli sign`)
+- 確認済み: WINVER / SDL とも、作った exe が埋め込みオプション (日本語の値を含む) を読み、data.xp3 / 結合した
+  xp3 から起動する。SDL は本体の既定値 (padinterval) が残る。バージョン情報・アイコンが Windows に表示され、
+  `forcedataxp3=1` で data フォルダから起動しなくなる。署名は krkrsign で検証できる
+
 ### krkrimg — 画像フォーマットコンバータ
 
 ```
@@ -171,6 +223,7 @@ libs/loop           ループ情報 (.sli) の読み書き
 libs/audio          音声の読み書き (WAV / Vorbis / Opus) とラウドネス・音量
 libs/tlg            TLG5 / TLG6 の読み書き (本体 SaveTLG5/6・LoadTLG の移植)
 libs/image          画像の読み書き (BMP / PNG / JPEG / TLG / PSD / CLIP)、旧 krkrtpc と同じ前処理、レイヤ書き出し
+libs/release        配布用の exe を作る (PE のリソース書き換え・セキュリティ設定・結合・署名。Windows 専用)
 web/common          全ツール共通の画面部品 (krt.js / krt.css: フォルダ・ファイル選択ほか)
 tools/<ツール>/      main.cpp (CLI + API) と web/ (画面)
 ```

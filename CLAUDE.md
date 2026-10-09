@@ -43,6 +43,13 @@ HTTP + SSE + browser app-mode window). **Every tool must also run headless from 
   expressions, give-up after 10 consecutive jumps). Keep it behaving exactly like the engine. Can be
   exercised headlessly in Node by stubbing `AudioWorkletProcessor` / `registerProcessor` / `sampleRate`.
 - `web/common` — shared UI (`krt.js`: init, job watching, folder / file picker; `krt.css`).
+- `libs/release` (`krt_release`, **Windows only**, built under `if(WIN32)`) — the releaser: copies an engine exe and
+  rewrites resources with `BeginUpdateResource`/`UpdateResource` (options: WINVER `TEXT/139` — absent in the exe when
+  the engine's option area is empty, so it is added; SDL `BINARY/CONFIG.CF`, merged with the engine's defaults; values
+  with non-ASCII are written as `name="\xNN..."` because the engine converts the line as a narrow string; icon groups;
+  `RT_VERSION`), patches `-- TVPSystemSecurityOptions name(n):... --` digits in place, then copies or binds the xp3
+  (16-byte aligned after the PE image) and signs last. Kind detection: `TEXT` resources present = WINVER, else
+  `BINARY` = SDL. Design: krkrz_dev `src/core/doc/ReleaseEmbedding.md`.
 - `tools/<name>/` — `main.cpp` (options, CLI path, `IModule` with the tool's API) + `web/`.
 
 ## Build

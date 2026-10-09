@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>リリーサ</title>
+<link rel="stylesheet" href="./common/krt.css">
+<style>
+	fieldset { border: 1px solid var(--line); border-radius: 6px; display: flex; flex-direction: column; gap: 6px; }
+	legend { color: var(--muted); }
+	.grid { display: grid; grid-template-columns: 9em 1fr; gap: 6px 10px; align-items: center; }
+	.grid input[type=text] { width: 100%; }
+	.opts { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; }
+	select { font: inherit; padding: 4px 6px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); color: var(--fg); }
+	textarea { width: 100%; height: 8em; font-family: ui-monospace, Consolas, monospace; font-size: 13px; padding: 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--fg); }
+	pre.info { margin: 0; white-space: pre-wrap; font-size: 12px; color: var(--muted); max-height: 12em; overflow: auto; }
+	ul.notes { margin: 0; padding-left: 1.4em; }
+</style>
+</head>
+<body>
+<header class="krt-header"><h1>リリーサ</h1></header>
+<main class="krt-main">
+	<div class="krt-row">
+		<label class="krt-label">設定ファイル</label>
+		<input type="text" id="file" spellcheck="false" placeholder="release.json (相対パスはこのファイルのフォルダ基準)">
+		<button id="open">開く…</button>
+		<button id="save">保存</button>
+	</div>
+
+	<fieldset>
+		<legend>実行可能ファイル</legend>
+		<div class="grid">
+			<span>元にする exe</span><div class="krt-row"><input type="text" id="exe" spellcheck="false" placeholder="吉里吉里Z の exe (何も結合していないもの)"><button id="exeBrowse">参照…</button><button id="inspect">調べる</button></div>
+			<span>出力先</span><div class="krt-row"><input type="text" id="output" spellcheck="false" placeholder="release/game.exe"><button id="outBrowse">参照…</button></div>
+		</div>
+		<pre class="info" id="info"></pre>
+	</fieldset>
+
+	<fieldset>
+		<legend>埋め込みオプション</legend>
+		<label><input type="checkbox" id="setOptions"> 書き換える (.cf と同じ書式。1 行 1 オプション、; で始まる行はコメント)</label>
+		<textarea id="options" spellcheck="false" placeholder="例: debugwin=no"></textarea>
+		<div class="krt-note">WINVER 版は TEXT リソース 139、SDL 版は BINARY リソース CONFIG.CF に書きます。exe と同じ名前の .cf があれば、そちらが優先されます。</div>
+	</fieldset>
+
+	<fieldset>
+		<legend>アイコンとバージョン情報</legend>
+		<div class="grid">
+			<span>アイコン (.ico)</span><div class="krt-row"><input type="text" id="icon" spellcheck="false" placeholder="空 = 変えない"><button id="iconBrowse">参照…</button></div>
+			<span>FileDescription</span><input type="text" id="v_FileDescription" placeholder="空 = 変えない">
+			<span>ProductName</span><input type="text" id="v_ProductName" placeholder="空 = 変えない">
+			<span>CompanyName</span><input type="text" id="v_CompanyName" placeholder="空 = 変えない">
+			<span>LegalCopyright</span><input type="text" id="v_LegalCopyright" placeholder="空 = 変えない">
+			<span>FileVersion</span><input type="text" id="v_FileVersion" placeholder="空 = 変えない (例 1.0.0.0)">
+			<span>ProductVersion</span><input type="text" id="v_ProductVersion" placeholder="空 = 変えない">
+		</div>
+	</fieldset>
+
+	<fieldset>
+		<legend>セキュリティ設定</legend>
+		<div class="opts" id="security"></div>
+		<div class="krt-note">forcedataxp3: 1 = xp3 からだけ起動 (data フォルダを見ない)。acceptfilenameargument: 0 = 引数をプロジェクトとして扱わない。項目は «調べる» で exe から読み取ります。</div>
+	</fieldset>
+
+	<fieldset>
+		<legend>データ</legend>
+		<div class="opts">
+			<label><input type="radio" name="dataMode" value="none"> 置かない</label>
+			<label><input type="radio" name="dataMode" value="copy" checked> exe の隣に置く</label>
+			<label><input type="radio" name="dataMode" value="bind"> exe に結合する</label>
+		</div>
+		<div class="grid" id="dataRows">
+			<span>xp3 / フォルダ</span><div class="krt-row"><input type="text" id="data" spellcheck="false" placeholder="フォルダなら xp3 を作る"><button id="dataFile">ファイル…</button><button id="dataDir">フォルダ…</button></div>
+			<span>プロファイル</span><div class="krt-row"><input type="text" id="rpf" spellcheck="false" placeholder="空 = フォルダの default.rpf か既定の分類"><button id="rpfBrowse">参照…</button></div>
+			<span>置く名前</span><input type="text" id="dataName" spellcheck="false" value="data.xp3">
+		</div>
+	</fieldset>
+
+	<fieldset>
+		<legend>署名</legend>
+		<div class="grid">
+			<span>秘密鍵</span><div class="krt-row"><input type="text" id="signKey" spellcheck="false" placeholder="空 = 署名しない"><button id="keyBrowse">参照…</button></div>
+		</div>
+		<div class="krt-note">署名 (.sig) は最後に作ります。作った後で exe を書き換えると (アイコンの差し替え・DRM など) 署名が合わなくなるので、作り直してください。</div>
+	</fieldset>
+
+	<div class="krt-row"><button id="run" class="primary">作成する</button><label><input type="checkbox" id="force"> 上書き</label></div>
+	<div id="jobArea" hidden>
+		<div id="progress" class="krt-progress"><div></div></div>
+		<div id="jobStatus" class="krt-note"></div>
+		<div id="result"></div>
+	</div>
+</main>
+<script type="module" src="./app.js"></script>
+</body>
+</html>
