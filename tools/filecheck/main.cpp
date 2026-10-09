@@ -54,9 +54,9 @@ int runCli(const Settings& s, const fs::path& root)
 	std::error_code ec;
 	if (s.keyFile.empty() && !fs::exists(filecheck::defaultConfigPath(), ec)) {
 		std::fprintf(stderr,
-			"error: 公開鍵がありません。«%s» を置くか、--key=<ini または PEM> を指定してください\n"
+			"error: 公開鍵がありません。«%s» (実行ファイルと同じフォルダ) を置くか、--key=<ini または PEM> を指定してください\n"
 			"usage: krkrcheck --cli [<フォルダ>] [--key=<ファイル>] [--json|--tsv] [--quiet]\n",
-			krt::fromPath(filecheck::defaultConfigPath().filename()).c_str());
+			krt::fromPath(filecheck::defaultConfigPath()).c_str());
 		return 2;
 	}
 	if (!loadSettingsConfig(s, cfg, err)) {
